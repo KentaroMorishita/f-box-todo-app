@@ -12,17 +12,18 @@ export type FilterType = "all" | "completed" | "incomplete"
 export const todosBox = RBox.pack<Todo[]>([])
 export const filterBox = RBox.pack<FilterType>("all")
 
-// フィルター関数
-const todoFilter = (type: FilterType) => (todos: Todo[]) =>
-  todos.filter(
-    {
-      all: () => true,
-      completed: (todo: Todo) => todo.completed,
-      incomplete: (todo: Todo) => !todo.completed,
-    }[type]
-  )
+// Function for filtering todos based on the filter type
+const todosFilter = (type: FilterType) => (todos: Todo[]) =>
+  todos.filter((todo) => todo.completed === (type === "completed"))
 
-// アプリカティブスタイルで派生状態を作成
-export const filteredTodosBox = RBox.pack(todoFilter)
-  ["<*>"](filterBox)
-  ["<*>"](todosBox)
+// RBox to determine whether filtering is necessary
+const shouldFilterBox = filterBox["<$>"]((type) => type !== "all")
+
+// Derived RBox to get the filtered todos
+export const filteredTodosBox = shouldFilterBox[">>="]((shouldFilter) =>
+  shouldFilter
+    ? // Apply filtering using an applicative style with the filter function
+      RBox.pack(todosFilter)["<*>"](filterBox)["<*>"](todosBox)
+    : // Return todosBox directly if no filtering is needed
+      todosBox
+)
